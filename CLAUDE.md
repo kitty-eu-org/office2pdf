@@ -67,30 +67,29 @@
 - All commits must use the local git config `user.name` and `user.email`. Verify with `git config user.name` and `git config user.email` before committing.
 - All commits must include `Signed-off-by` line (always use `git commit -s`). The `Signed-off-by` name must match the commit author.
 
-## Branching & PR Workflow
+## Branching & Merge Workflow
 
-- All changes go through pull requests. No direct commits to `main`.
+- All changes go through dedicated branches/worktrees. No direct commits to `main`; merge validated worktree branches into local `main`.
 - Branch naming: `<type>/<short-description>` (e.g., `feat/add-parser`, `fix/table-bug`).
 - One branch = one focused unit of work.
 - **Use git worktrees** for all branch work. Do not use `git checkout`/`git switch` in the main repo.
   - Create: `git worktree add ../<repo-name>-<branch-name> -b <type>/<short-description>`
-  - Work and push from inside the worktree.
+  - Work from inside the worktree.
+  - Merge only worktrees with clear gains: tests pass, and metrics improve or at least do not regress materially.
   - Do not delete worktrees immediately after task completion — remove only when starting new work or upon user confirmation.
 
-## PR Merge Procedure
+## Worktree Merge Procedure
 
 Follow all steps in order:
 
-1. Rewrite PR description if empty/unclear via `gh pr edit`. Include: what changed, why, key changes, and relevant context.
-2. Cross-reference related issues (`gh issue list`). Use "Related: #N" — avoid auto-close keywords unless instructed.
-3. Check for conflicts. If `main` has advanced, rebase/merge as needed.
-4. Wait for CI to pass: `gh pr checks <number> --watch`. Abort if tests fail.
-5. Final code review via `gh pr diff <number>` — check for debug statements, hardcoded paths, credentials, unused imports.
-6. Merge: `gh pr merge <number> --merge`. **Never use `--delete-branch`** (worktree depends on the branch).
-7. Return to main repo, `git pull` to sync.
-8. Remove worktree: `git worktree remove ../<repo-name>-<branch-name>`
-9. Delete local branch: `git branch -d <branch-name>`
-10. Delete remote branch: `git push origin --delete <branch-name>`
+1. Check for conflicts. If `main` has advanced, rebase/merge as needed in the worktree.
+2. Run required tests. Abort on failures. For comparison work, merge only measured improvements.
+3. Final code review via `git diff main...<branch-name>` — check for debug statements, hardcoded paths, credentials, unused imports.
+4. Return to the main repo and merge: `git merge --no-ff <branch-name>`.
+5. Push `main` if the merge should be shared.
+6. Remove worktree: `git worktree remove ../<repo-name>-<branch-name>`
+7. Delete local branch: `git branch -d <branch-name>`
+8. Delete remote branch if one was pushed and is no longer needed: `git push origin --delete <branch-name>`
 
 ## MSRV Policy — 6-Month Rolling Minimum
 
@@ -125,7 +124,7 @@ When comparing PDF output against ground truth (classified fixtures):
 
 When asked to "release", always perform **both** GitHub Release and crates.io publish:
 
-1. **Version bump** — Create a PR (`chore/publish-<version>`) that bumps `version` in both `crates/office2pdf/Cargo.toml` and `crates/office2pdf-cli/Cargo.toml`, and updates the CLI's `office2pdf` dependency version. Merge via standard PR workflow.
+1. **Version bump** — Create a branch (`chore/publish-<version>`) that bumps `version` in both `crates/office2pdf/Cargo.toml` and `crates/office2pdf-cli/Cargo.toml`, and updates the CLI's `office2pdf` dependency version. Merge via the standard merge workflow.
 2. **GitHub Release** — `gh release create v<version>` with changelog and contributors section.
    - Use `git log <prev-tag>..HEAD --format='%an' | sort -u` to find contributors. List each with their GitHub profile link.
 3. **crates.io publish** — Publish lib first, then CLI:
